@@ -1,5 +1,6 @@
 mod heading;
 mod html;
+mod paragraph;
 
 pub fn transpile(markdown: &str) -> String {
     let output = markdown
@@ -13,5 +14,5 @@ pub fn transpile(markdown: &str) -> String {
 
 fn convert_line(line: &str) -> String {
     let l = line.trim();
-    heading::from(l).unwrap_or(l.to_string())
+    heading::from(l).unwrap_or(paragraph::from(l).unwrap_or(l.to_string()))
 }
