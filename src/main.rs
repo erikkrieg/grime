@@ -1,6 +1,4 @@
-mod transpile;
-
 fn main() {
-    let out = transpile::transpile("Transpile world!");
+    let out = grime::transpile::transpile("# Hello, World!");
     println!("{out}");
 }

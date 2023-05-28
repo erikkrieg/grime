@@ -5,7 +5,10 @@ type Html = String;
 pub fn transpile(markdown: &str) -> String {
     let output = markdown
         .lines()
-        .fold(String::new(), |acc, l| acc + &convert_line(l));
+        .filter(|l| !l.is_empty())
+        .map(convert_line)
+        .intersperse("\n".into())
+        .collect();
     output
 }
 
