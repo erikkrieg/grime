@@ -1,3 +1,6 @@
+mod transpile;
+
 fn main() {
-    println!("Hello, world!");
+    let out = transpile::transpile("Transpile world!");
+    println!("{out}");
 }
