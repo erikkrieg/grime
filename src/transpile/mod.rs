@@ -1,5 +1,6 @@
 mod heading;
 mod html;
+mod inline;
 mod paragraph;
 
 pub fn transpile(markdown: &str) -> String {
