@@ -1,21 +1,14 @@
-mod heading;
+mod block;
 mod html;
 mod inline;
-mod paragraph;
 
 pub fn transpile(markdown: &str) -> String {
     let output = markdown
         .lines()
         .filter(|l| !l.is_empty())
-        .map(convert_line)
+        .map(block::replace)
         .map(|l| inline::replace(&l))
         .intersperse("\n".into())
         .collect();
     output
-}
-
-fn convert_line(line: &str) -> String {
-    let l = line.trim();
-
-    heading::from(l).unwrap_or(paragraph::from(l).unwrap_or(l.to_string()))
 }
