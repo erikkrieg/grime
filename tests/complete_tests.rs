@@ -1,4 +1,5 @@
 use grime::transpile::*;
+use pretty_assertions::assert_eq;
 use std::fs;
 
 fn read_fixture(file: &str) -> String {
