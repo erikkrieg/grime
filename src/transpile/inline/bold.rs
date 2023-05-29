@@ -1,7 +1,7 @@
 use crate::transpile::html::Html;
 use regex::Regex;
 
-fn replace(text: &str) -> Html {
+pub fn replace(text: &str) -> Html {
     let pattern = Regex::new(r"(\*\*|__)(.*?)(\*\*|__)").expect("Bold replace regex was invalid");
     pattern.replace_all(text, "<strong>$2</strong>").to_string()
 }

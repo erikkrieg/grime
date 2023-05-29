@@ -8,6 +8,7 @@ pub fn transpile(markdown: &str) -> String {
         .lines()
         .filter(|l| !l.is_empty())
         .map(convert_line)
+        .map(|l| inline::replace(&l))
         .intersperse("\n".into())
         .collect();
     output
@@ -15,5 +16,6 @@ pub fn transpile(markdown: &str) -> String {
 
 fn convert_line(line: &str) -> String {
     let l = line.trim();
+
     heading::from(l).unwrap_or(paragraph::from(l).unwrap_or(l.to_string()))
 }
