@@ -2,6 +2,9 @@ use crate::transpile::html::{create, Html};
 use std::char;
 
 pub fn from(input: &str) -> Option<Html> {
+    if input.is_empty() {
+        return None;
+    }
     let index = input.find(char::is_whitespace).unwrap_or(0);
     let first = &input[0..index];
     let inner = &input[(index + 1)..];

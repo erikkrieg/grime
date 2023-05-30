@@ -8,8 +8,15 @@ fn read_fixture(file: &str) -> String {
 }
 
 #[test]
-fn headings_integration_test() {
+fn complete_integration_test() {
     let markdown = read_fixture("complete.md");
     let html = read_fixture("complete.html");
     assert_eq!(transpile(&markdown), html.trim_end());
+}
+
+#[test]
+fn complete_parser_integration_test() {
+    let markdown = read_fixture("complete_parse.md");
+    let html = read_fixture("complete_parse.html");
+    assert_eq!(parse(&markdown), html);
 }
