@@ -28,7 +28,7 @@ pub fn replace(
         html_out = blockquote::replace(&html_out.0, rules, next_line);
     }
     if rules.section.code {
-        println!("todo: implement code section");
+        // println!("todo: implement code section");
     }
     html_out
 }
