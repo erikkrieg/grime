@@ -8,5 +8,5 @@ fn headings_integration_test() {
         .expect("tests/headings.md not found");
     let html = fs::read_to_string("./tests/heading_fixtures/headings.html")
         .expect("tests/headings.html not found");
-    assert_eq!(transpile(&markdown), html.trim_end());
+    assert_eq!(parse(&markdown), html.trim_end());
 }

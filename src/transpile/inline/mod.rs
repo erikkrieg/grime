@@ -1,8 +1,23 @@
+use super::{html::Html, ParserRules};
+use regex::Regex;
+
 pub mod bold;
 pub mod italic;
 
-use crate::transpile::html::Html;
-use regex::Regex;
+#[derive(Debug)]
+pub struct InlineRules {
+    pub bold: bool,
+    pub italic: bool,
+}
+
+impl Default for InlineRules {
+    fn default() -> Self {
+        Self {
+            bold: true,
+            italic: true,
+        }
+    }
+}
 
 // This is a lazy fix for a bug that occurs due to my lazy regex implementation
 // of inline elements. In the case of ***foo*** or ___foo___ the <strong> and <em>
@@ -17,7 +32,16 @@ pub fn hacky_fix(text: &str) -> Html {
         .to_string()
 }
 
-pub fn replace(text: &str) -> String {
-    let out = italic::replace(&bold::replace(text));
-    hacky_fix(&out)
+pub fn replace(text: &str, rules: &mut ParserRules) -> String {
+    let mut text = text.trim().to_string();
+    if rules.inline.bold {
+        text = bold::replace(&text);
+    }
+    if rules.inline.italic {
+        text = italic::replace(&text);
+    }
+    if rules.inline.bold && rules.inline.italic {
+        text = hacky_fix(&text);
+    }
+    text
 }

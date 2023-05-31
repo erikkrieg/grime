@@ -11,7 +11,7 @@ fn read_fixture(file: &str) -> String {
 fn complete_integration_test() {
     let markdown = read_fixture("complete.md");
     let html = read_fixture("complete.html");
-    assert_eq!(transpile(&markdown), html.trim_end());
+    assert_eq!(parse(&markdown), html.trim_end());
 }
 
 #[test]

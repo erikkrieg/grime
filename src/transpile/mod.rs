@@ -1,69 +1,37 @@
 mod block;
 mod html;
 mod inline;
+mod section;
 
-pub fn transpile(markdown: &str) -> String {
-    let output = markdown
-        .lines()
-        .filter(|l| !l.is_empty())
-        .map(block::replace)
-        .map(|l| inline::replace(&l))
-        .intersperse("\n".into())
-        .collect();
-    output
+#[derive(Debug, Default)]
+pub struct ParserRules {
+    pub section: section::SectionRules,
+    pub block: block::BlockRules,
+    pub inline: inline::InlineRules,
 }
 
-/*
- * This is needs a major refactor as it is brittle spaghetti.
- * Blockquote is all mixed into everything in a way that could be duplicated
- * by some other multi-line blocks. The other multi-line blocks:
- * - blockquote
- *  - can contain other block elements (only block that can do this)
- *  - can contain inline elements
- * - list (ordered and unordered)
- *  - can contain inline elements
- * - code
- *  - can contain line breaks
- *  - special: maybe syntax highlighting for other langs
- * - horizontal rules
- *  - not sure if I want this to be <section> or just <hr>
- */
-pub fn parse(md: &str) -> html::Html {
-    let mut lines = md.lines().peekable();
-    let mut body = String::new();
-    let mut blockquote = false;
+pub fn parse(markdown: &str) -> html::Html {
+    let mut rules = ParserRules::default();
+    let mut html_out = html::Html::new();
+    let mut lines = markdown
+        .lines()
+        .map(|l| l.trim())
+        .filter(|l| !l.is_empty())
+        .peekable();
     while let Some(line) = lines.next() {
-        let line = line.trim();
-        let first_char = line.chars().next();
-        match first_char {
-            Some('>') => {
-                if !blockquote {
-                    body += "<blockquote>\n";
-                    blockquote = true;
-                }
+        let (line, prefix, next_line) = section::replace(line, &mut rules, lines.peek());
+        if !line.is_empty() {
+            let line = block::replace(&line, &mut rules);
+            let line = inline::replace(&line, &mut rules);
+            html_out += &format!("{}{line}", prefix.unwrap_or("".into()));
+            // Avoid newline EOF
+            if lines.peek().is_some() || next_line.is_some() {
+                html_out += "\n";
             }
-            Some('-') => todo!("Handle unordered list"),
-            _ => (),
-        };
-        let line = inline::replace(if blockquote {
-            line[1..].trim_start()
-        } else {
-            line
-        });
-        let mut line = block::replace(&line);
-        if blockquote {
-            line = format!("\t{line}");
         }
-        if !line.trim().is_empty() {
-            body += &line;
-            body += "\n";
-        }
-        if blockquote {
-            blockquote = matches!(lines.peek().unwrap_or(&"").chars().next(), Some('>'));
-            if !blockquote {
-                body += "</blockquote>\n";
-            }
+        if let Some(l) = next_line {
+            html_out += &format!("{l}\n");
         }
     }
-    body
+    html_out
 }
