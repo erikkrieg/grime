@@ -18,5 +18,5 @@ fn complete_integration_test() {
 fn complete_parser_integration_test() {
     let markdown = read_fixture("complete_parse.md");
     let html = read_fixture("complete_parse.html");
-    assert_eq!(parse(&markdown), html);
+    assert_eq!(parse(&markdown), html.trim_end());
 }
