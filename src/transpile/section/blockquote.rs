@@ -12,7 +12,6 @@ fn trim_blockquote(s: &str) -> &str {
 fn toggle_blockquote(enter: bool, rules: &mut ParserRules) {
     rules.section.code = !enter;
     rules.block.heading = !enter;
-    rules.block.paragraph = !enter;
 }
 
 pub fn replace(

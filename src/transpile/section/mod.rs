@@ -1,7 +1,7 @@
 use super::{html::Html, ParserRules};
 
-mod blockquote;
-mod code;
+pub mod blockquote;
+pub mod code;
 
 #[derive(Debug)]
 pub struct SectionRules {

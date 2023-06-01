@@ -11,16 +11,16 @@ pub struct ParserRules {
 }
 
 pub fn parse(markdown: &str) -> html::Html {
-    let mut rules = ParserRules::default();
     let mut html_out = html::Html::new();
-    let mut lines = markdown
-        .lines()
-        .map(|l| l.trim())
-        .filter(|l| !l.is_empty())
-        .peekable();
+    let mut lines = markdown.lines().filter(|l| !l.trim().is_empty()).peekable();
     while let Some(line) = lines.next() {
+        let mut rules = ParserRules::default();
+        let line = line.trim();
         let is_last_line = lines.peek().is_none();
         let (line, prefix, next_line) = section::replace(line, &mut rules, lines.peek());
+        // TODO: move this into section::replace once done testing. Will require
+        // moderate refactoring.
+        let line = section::code::replace(&line, &mut rules, &mut lines);
         if !line.is_empty() {
             let line = block::replace(&line, &mut rules);
             let line = inline::replace(&line, &mut rules);
