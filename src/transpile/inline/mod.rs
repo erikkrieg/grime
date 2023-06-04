@@ -87,7 +87,6 @@ pub fn replace(line: &str, _rules: &mut ParserRules) -> Result<Html, &'static st
         };
         prev = Some(ch);
     }
-    //Ok(hacky_fix(&html))
     Ok(html)
 }
 
