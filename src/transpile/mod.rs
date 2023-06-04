@@ -22,8 +22,8 @@ pub fn parse(markdown: &str) -> html::Html {
         // moderate refactoring.
         let line = section::code::replace(&line, &mut rules, &mut lines);
         if !line.is_empty() {
+            let line = inline::replace(&line, &mut rules).unwrap();
             let line = block::replace(&line, &mut rules);
-            let line = inline::replace(&line, &mut rules);
             html_out += &format!("{}{line}", prefix.unwrap_or("".into()));
             if !is_last_line || next_line.is_some() {
                 html_out += "\n";

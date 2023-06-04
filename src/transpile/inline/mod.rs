@@ -1,5 +1,4 @@
 use super::{html::Html, ParserRules};
-use regex::Regex;
 
 #[derive(Debug)]
 pub struct InlineRules {
@@ -20,48 +19,76 @@ impl Default for InlineRules {
     }
 }
 
-// This is a lazy fix for a bug that occurs due to my lazy regex implementation
-// of inline elements. In the case of ***foo*** or ___foo___ the <strong> and <em>
-// tags will now wrap correctly.
-// I plan to refactor out the use of regex in favor of a custom parser in the
-// future. I'm fine with this gnarly fix in the meantime.
-pub fn hacky_fix(text: &str) -> Html {
-    let pattern =
-        Regex::new(r"(<strong><em>)(.*?)(</strong></em>)").expect("Hacky fix regex was invalid");
-    pattern
-        .replace_all(text, "<strong><em>$2</em></strong>")
-        .to_string()
-}
-
-pub fn replace(line: &str, _rules: &mut ParserRules) -> Html {
+pub fn replace(line: &str, _rules: &mut ParserRules) -> Result<Html, &'static str> {
     let mut html = Html::new();
     let mut chars = line.chars().peekable();
     let mut open_bold = false;
-    let mut open_italic = false;
-    let mut open_code = false;
+    let mut open_italic_char = None;
+    let mut prev: Option<char> = None;
     while let Some(ch) = chars.next() {
-        match (ch, chars.peek(), open_code) {
-            ('*', Some('*'), false) | ('_', Some('_'), false) => {
+        match (prev, ch, chars.peek(), open_italic_char) {
+            (_, '*', Some('*'), Some('_') | None) => {
                 let tag = if !open_bold { "<strong>" } else { "</strong>" };
-                html.push_str(tag);
                 chars.next();
-                open_bold = !open_bold;
+                if !open_bold && chars.peek().is_none() {
+                    html.push_str("**");
+                } else {
+                    html.push_str(tag);
+                    open_bold = !open_bold;
+                }
             }
-            ('*' | '_', _, false) => {
-                let tag = if !open_italic { "<em>" } else { "</em>" };
-                html.push_str(tag);
-                open_italic = !open_italic;
+            (prev, '_', Some(next), None) => {
+                if prev.unwrap_or(' ').is_whitespace() {
+                    open_italic_char = Some('_');
+                    html.push_str("<em>");
+                    if next == &'_' {
+                        let escaped = &chars.by_ref().take_while(|c| c == &'_').collect::<String>();
+                        html.push_str(escaped);
+                    }
+                } else {
+                    html.push('_');
+                }
             }
-            ('`', _, _) => {
-                let tag = if !open_code { "<code>" } else { "</code>" };
-                html.push_str(tag);
-                open_code = !open_code;
+            (_, '_', next, Some('_')) => {
+                if next.unwrap_or(&' ').is_whitespace() {
+                    open_italic_char = None;
+                    html.push_str("</em>");
+                } else {
+                    html.push('_');
+                }
             }
-            ('\\', Some(_), false) => html.push(chars.next().unwrap()),
+            (_, '*', Some(_), None) => {
+                open_italic_char = Some('*');
+                html.push_str("<em>");
+            }
+            (_, '*', _, Some('*')) => {
+                open_italic_char = None;
+                html.push_str("</em>");
+            }
+            (_, '`', _, _) => {
+                html.push_str("<code>");
+                let mut is_code_closed = false;
+                html.push_str(
+                    &chars
+                        .by_ref()
+                        .take_while(|c| {
+                            is_code_closed = c == &'`';
+                            !is_code_closed
+                        })
+                        .collect::<String>(),
+                );
+                if !is_code_closed {
+                    return Err("Inline code element is missing closing backtick");
+                }
+                html.push_str("</code>");
+            }
+            (_, '\\', Some(_), _) => html.push(chars.next().unwrap()),
             _ => html.push(ch),
         };
+        prev = Some(ch);
     }
-    hacky_fix(&html)
+    //Ok(hacky_fix(&html))
+    Ok(html)
 }
 
 #[cfg(test)]
@@ -70,44 +97,86 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn basic_replace_test() {
+    fn italic_replace() {
         let mut rules = ParserRules::default();
-        let markdown = "**bold** __underscore bold__ and `code` and _italic_ *asterisk italic*.";
-        let html = "<strong>bold</strong> <strong>underscore bold</strong> and <code>code</code> and <em>italic</em> <em>asterisk italic</em>.";
-        assert_eq!(replace(markdown, &mut rules), html);
+        let markdown = "_foo_ *bar* foo*bar*baz foo_bar_baz end_";
+        let html = "<em>foo</em> <em>bar</em> foo<em>bar</em>baz foo_bar_baz end_";
+        assert_eq!(replace(markdown, &mut rules).unwrap(), html);
     }
 
     #[test]
-    fn bad_underscore_and_asterisk_replace_test() {
+    fn italic_mixed_syntax_replace() {
         let mut rules = ParserRules::default();
-        let markdown = "_*bad*_ ***foo_** *bar_";
-        // I'm actually not yet sure what the correct output is here. I can make
-        // some assumption or be strict and panic. TBD.
-        let html = "<em></em>bad<em></em> <strong><em>foo</em></strong> <em>bar</em>";
-        assert_eq!(replace(markdown, &mut rules), html);
+        let markdown = "_foo*bar_";
+        let html = "<em>foo*bar</em>";
+        assert_eq!(replace(markdown, &mut rules).unwrap(), html);
     }
 
     #[test]
-    fn bold_and_italic_replace_test() {
+    fn italic_edge_case_replace() {
         let mut rules = ParserRules::default();
-        let markdown = "***one*** ___two___ _**three**_";
-        let html = "<strong><em>one</em></strong> <strong><em>two</em></strong> <em><strong>three</strong></em>";
-        assert_eq!(replace(markdown, &mut rules), html);
+        let markdown = "_foo_.";
+        let html = "<em>foo_.";
+        assert_eq!(replace(markdown, &mut rules).unwrap(), html);
     }
 
     #[test]
-    fn code_replace_test() {
+    fn bold_replace() {
         let mut rules = ParserRules::default();
-        let markdown = "`_not italic_ ******`";
-        let html = "<code>_not italic_ ******</code>";
-        assert_eq!(replace(markdown, &mut rules), html);
+        let markdown = "**foo** foo**bar**baz foo__bar__baz end**";
+        let html = "<strong>foo</strong> foo<strong>bar</strong>baz foo__bar__baz end**";
+        assert_eq!(replace(markdown, &mut rules).unwrap(), html);
+    }
+
+    #[test]
+    fn bold_and_italic_replace() {
+        let mut rules = ParserRules::default();
+        let markdown = "***foo*** _**bar**_ foo***bar***baz";
+        let html = "<strong><em>foo</em></strong> <em><strong>bar</strong></em> foo<strong><em>bar</em></strong>baz";
+        assert_eq!(replace(markdown, &mut rules).unwrap(), html);
+    }
+
+    #[test]
+    fn awkward_bold_and_italic_replace() {
+        let mut rules = ParserRules::default();
+        let markdown = "**_???_**";
+        let html = "<strong>_???_</strong>";
+        assert_eq!(replace(markdown, &mut rules).unwrap(), html);
+    }
+
+    #[test]
+    fn code_replace() {
+        let mut rules = ParserRules::default();
+        let markdown = "`foo` and `bar`";
+        let html = "<code>foo</code> and <code>bar</code>";
+        assert_eq!(replace(markdown, &mut rules).unwrap(), html);
+    }
+
+    #[test]
+    fn code_escape_replace() {
+        let mut rules = ParserRules::default();
+        let markdown = "Examples: `**bold** and _italic_`";
+        let html = "Examples: <code>**bold** and _italic_</code>";
+        assert_eq!(replace(markdown, &mut rules).unwrap(), html);
+    }
+
+    #[test]
+    fn code_no_closing_replace() {
+        let mut rules = ParserRules::default();
+        let markdown = "`foo";
+        assert_eq!(
+            replace(markdown, &mut rules).unwrap_err(),
+            "Inline code element is missing closing backtick"
+        );
     }
 
     #[test]
     fn escape_replace_test() {
         let mut rules = ParserRules::default();
-        let markdown = r"\_not italic\_";
-        let html = "_not italic_";
-        assert_eq!(replace(markdown, &mut rules), html);
+        let markdown = r"*italic* and \*not italic\*";
+        let html = "<em>italic</em> and *not italic*";
+        assert_eq!(replace(markdown, &mut rules).unwrap(), html);
     }
+
+    // TODO: panic if line ends with unclosed elements
 }

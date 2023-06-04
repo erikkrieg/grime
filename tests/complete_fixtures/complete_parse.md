@@ -1,5 +1,5 @@
 # Heading level 1
-I __really__ like using Markdown.
+I *really* like using Markdown.
 
 I _think_ I'll use it to format **all of my documents** from now on.
 
@@ -7,7 +7,7 @@ I _think_ I'll use it to format **all of my documents** from now on.
 
 Italicized text is the *cat's meow*.
 
-This text is ***really important*** and **_so is this_**.
+This text is ***really important*** and _**so is this**_
 
 ## Blockquotes
 
