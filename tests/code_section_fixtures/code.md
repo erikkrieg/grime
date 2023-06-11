@@ -4,3 +4,10 @@ fn hello(name: &str) {
 }
 ```
 _That's some code_
+
+```
+---
+***
+___
+`foo`
+```

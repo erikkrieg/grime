@@ -16,11 +16,8 @@ pub fn parse(markdown: &str) -> html::Html {
     while let Some(line) = lines.next() {
         let mut rules = ParserRules::default();
         let line = line.trim();
+        let (line, prefix, next_line) = section::replace(line, &mut rules, &mut lines);
         let is_last_line = lines.peek().is_none();
-        let (line, prefix, next_line) = section::replace(line, &mut rules, lines.peek());
-        // TODO: move this into section::replace once done testing. Will require
-        // moderate refactoring.
-        let line = section::code::replace(&line, &mut rules, &mut lines);
         if !line.is_empty() {
             let line = if let Some(hr) = block::horizontal_rule::from(&line) {
                 hr

@@ -13,6 +13,7 @@ pub fn replace(
 
     if line == "```" {
         rules.block.paragraph = false;
+        rules.inline.off();
         html_out = "<code>\n".into();
         html_out += &lines
             .take_while(|l| l.trim() != "```")

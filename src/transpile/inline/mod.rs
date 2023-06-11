@@ -1,11 +1,31 @@
 use super::{html::Html, ParserRules};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, PartialOrd)]
 pub struct InlineRules {
     pub bold: bool,
     pub code: bool,
     pub escape: bool,
     pub italic: bool,
+}
+
+impl InlineRules {
+    fn set_all(self: &mut Self, val: bool) {
+        self.bold = val;
+        self.code = val;
+        self.escape = val;
+        self.italic = val;
+    }
+    pub fn on(self: &mut Self) {
+        self.set_all(true);
+    }
+    pub fn off(self: &mut Self) {
+        self.set_all(false);
+    }
+    pub fn is_all_off(self: &Self) -> bool {
+        let mut off = Self::default();
+        off.off();
+        self == &off
+    }
 }
 
 impl Default for InlineRules {
@@ -19,15 +39,18 @@ impl Default for InlineRules {
     }
 }
 
-pub fn replace(line: &str, _rules: &mut ParserRules) -> Result<Html, &'static str> {
+pub fn replace(line: &str, rules: &mut ParserRules) -> Result<Html, &'static str> {
+    if rules.inline.is_all_off() {
+        return Ok(line.into());
+    }
     let mut html = Html::new();
     let mut chars = line.chars().peekable();
     let mut open_bold = false;
     let mut open_italic_char = None;
     let mut prev: Option<char> = None;
     while let Some(ch) = chars.next() {
-        match (prev, ch, chars.peek(), open_italic_char) {
-            (_, '*', Some('*'), Some('_') | None) => {
+        match (&rules.inline, prev, ch, chars.peek(), open_italic_char) {
+            (InlineRules { bold: true, .. }, _, '*', Some('*'), Some('_') | None) => {
                 let tag = if !open_bold { "<strong>" } else { "</strong>" };
                 chars.next();
                 if !open_bold && chars.peek().is_none() {
@@ -37,7 +60,7 @@ pub fn replace(line: &str, _rules: &mut ParserRules) -> Result<Html, &'static st
                     open_bold = !open_bold;
                 }
             }
-            (prev, '_', Some(next), None) => {
+            (InlineRules { italic: true, .. }, prev, '_', Some(next), None) => {
                 if prev.unwrap_or(' ').is_whitespace() {
                     open_italic_char = Some('_');
                     html.push_str("<em>");
@@ -49,7 +72,7 @@ pub fn replace(line: &str, _rules: &mut ParserRules) -> Result<Html, &'static st
                     html.push('_');
                 }
             }
-            (_, '_', next, Some('_')) => {
+            (InlineRules { italic: true, .. }, _, '_', next, Some('_')) => {
                 if next.unwrap_or(&' ').is_whitespace() {
                     open_italic_char = None;
                     html.push_str("</em>");
@@ -57,15 +80,15 @@ pub fn replace(line: &str, _rules: &mut ParserRules) -> Result<Html, &'static st
                     html.push('_');
                 }
             }
-            (_, '*', Some(_), None) => {
+            (InlineRules { italic: true, .. }, _, '*', Some(_), None) => {
                 open_italic_char = Some('*');
                 html.push_str("<em>");
             }
-            (_, '*', _, Some('*')) => {
+            (InlineRules { italic: true, .. }, _, '*', _, Some('*')) => {
                 open_italic_char = None;
                 html.push_str("</em>");
             }
-            (_, '`', _, _) => {
+            (InlineRules { code: true, .. }, _, '`', _, _) => {
                 html.push_str("<code>");
                 let mut is_code_closed = false;
                 html.push_str(
@@ -82,7 +105,9 @@ pub fn replace(line: &str, _rules: &mut ParserRules) -> Result<Html, &'static st
                 }
                 html.push_str("</code>");
             }
-            (_, '\\', Some(_), _) => html.push(chars.next().unwrap()),
+            (InlineRules { escape: true, .. }, _, '\\', Some(_), _) => {
+                html.push(chars.next().unwrap())
+            }
             _ => html.push(ch),
         };
         prev = Some(ch);

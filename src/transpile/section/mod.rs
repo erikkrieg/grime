@@ -1,4 +1,5 @@
 use super::{html::Html, ParserRules};
+use std::iter::Peekable;
 
 pub mod blockquote;
 pub mod code;
@@ -21,14 +22,14 @@ impl Default for SectionRules {
 pub fn replace(
     line: &str,
     rules: &mut ParserRules,
-    next_line: Option<&&str>,
+    lines: &mut Peekable<impl Iterator<Item = &str>>,
 ) -> (Html, Option<Html>, Option<Html>) {
     let mut html_out = (line.trim().to_string(), None, None);
     if rules.section.blockquote {
-        html_out = blockquote::replace(&html_out.0, rules, next_line);
+        html_out = blockquote::replace(&html_out.0, rules, lines.peek());
     }
     if rules.section.code {
-        // println!("todo: implement code section");
+        html_out.0 = code::replace(&html_out.0, rules, lines);
     }
     html_out
 }
