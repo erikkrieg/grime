@@ -7,6 +7,8 @@ I _think_ I'll use it to format **all of my documents** from now on.
 
 Italicized text is the *cat's meow*.
 
+___
+
 This text is ***really important*** and _**so is this**_
 
 ## Blockquotes
@@ -14,3 +16,9 @@ This text is ***really important*** and _**so is this**_
 > This is something I wrote as part of an integration test.
 >
 > _Erik Krieg, 2023_
+
+***
+
+> The end.
+
+---
